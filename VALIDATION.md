@@ -1,0 +1,38 @@
+# Validation record
+
+Validation date: 2026-10-16
+
+## Passed locally
+
+- Built the Dockerfile from scratch on linux/amd64.
+- Both downloaded archives passed the pinned SHA-256 checks.
+- Executables inside the built image reported:
+  - `nexora-panel 0.0.4`
+  - `nexora-node 0.0.4`
+- Fresh persistent-state bootstrap succeeded through the supported Nexora API.
+- The panel and node established mTLS and the node reported connected.
+- The wrapper-created template activated the VLESS/WebSocket listener.
+- `/healthz` returned HTTP 200.
+- `/panel/` returned HTTP 200 through nginx.
+- Login cookies received `Secure`, `HttpOnly`, and `SameSite=Lax` at nginx.
+- `/ws` completed a WebSocket upgrade with HTTP 101.
+- A test user received exactly one wrapper-owned link with:
+  - `security=tls`
+  - `type=ws`
+  - `path=/ws`
+  - external port `443`
+- The subscription endpoint returned the same TLS link.
+- Full local data path passed:
+
+  `Xray client -> local TLS edge simulation -> wrapper nginx -> Nexora Node VLESS/WS -> public internet`
+
+- A stop/start with the same mounted `/data` preserved the test user's UUID, subscription ID, node certificate, and node key.
+- Changing the configured public domain reconciled the CATWOMAN resources and regenerated the user's link with the new host while preserving the UUID and node certificate.
+- Missing `CATWOMAN_ADMIN_PASSWORD` failed closed with exit code 64 and a clear error.
+- Static checks passed for Python, POSIX shell, nginx configuration, branding, and secret scans.
+
+## Not yet claimed
+
+- No live Railway deployment of this repository has been performed.
+- No real phone client has connected through a Railway-generated domain.
+- No protocol other than the default VLESS/WebSocket path has been validated by this wrapper.

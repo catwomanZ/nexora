@@ -1,0 +1,107 @@
+worker_processes auto;
+pid /run/catwoman/nginx.pid;
+error_log /dev/stderr info;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    server_tokens off;
+
+    access_log /dev/stdout;
+    sendfile on;
+    keepalive_timeout 65;
+    client_max_body_size 512m;
+
+    client_body_temp_path /tmp/nginx-client-body;
+    proxy_temp_path /tmp/nginx-proxy;
+    fastcgi_temp_path /tmp/nginx-fastcgi;
+    uwsgi_temp_path /tmp/nginx-uwsgi;
+    scgi_temp_path /tmp/nginx-scgi;
+
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+
+    map $http_x_forwarded_proto $forwarded_proto {
+        default $http_x_forwarded_proto;
+        '' $scheme;
+    }
+
+    upstream nexora_panel {
+        server 127.0.0.1:${CATWOMAN_PANEL_UPSTREAM_PORT};
+        keepalive 16;
+    }
+
+    upstream nexora_ws {
+        server 127.0.0.1:${CATWOMAN_INBOUND_UPSTREAM_PORT};
+        keepalive 16;
+    }
+
+    server {
+        listen 0.0.0.0:${PORT};
+        server_name _;
+        absolute_redirect off;
+        port_in_redirect off;
+
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy no-referrer always;
+
+        location = /healthz {
+            access_log off;
+            default_type application/json;
+            return 200 '{"status":"ok","service":"CATWOMAN Nexora"}\n';
+        }
+
+        location = / {
+            return 302 /panel/;
+        }
+
+        # Railway terminates public TLS; Nexora receives the original host/proto.
+        location = /panel {
+            proxy_pass http://nexora_panel;
+            include /etc/catwoman/proxy-common.conf;
+            proxy_cookie_flags nexora_session secure httponly samesite=lax;
+        }
+
+        location ^~ /panel/ {
+            proxy_pass http://nexora_panel;
+            include /etc/catwoman/proxy-common.conf;
+            proxy_cookie_flags nexora_session secure httponly samesite=lax;
+            proxy_buffering off;
+        }
+
+        location = /sub {
+            proxy_pass http://nexora_panel;
+            include /etc/catwoman/proxy-common.conf;
+        }
+
+        location ^~ /sub/ {
+            proxy_pass http://nexora_panel;
+            include /etc/catwoman/proxy-common.conf;
+        }
+
+        # The only default client data path: VLESS over WebSocket.
+        location = /ws {
+            proxy_pass http://nexora_ws;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $forwarded_proto;
+            proxy_read_timeout 1d;
+            proxy_send_timeout 1d;
+            proxy_buffering off;
+        }
+
+        location / {
+            return 404;
+        }
+    }
+}
