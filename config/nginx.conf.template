@@ -42,6 +42,11 @@ http {
         keepalive 16;
     }
 
+    upstream catwoman_domain_discovery {
+        server 127.0.0.1:18090;
+        keepalive 2;
+    }
+
     server {
         listen 0.0.0.0:${PORT};
         server_name _;
@@ -57,18 +62,33 @@ http {
             return 200 '{"status":"ok","service":"CATWOMAN Nexora"}\n';
         }
 
+        location = /__catwoman_discover {
+            internal;
+            proxy_pass http://catwoman_domain_discovery/discover;
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+            proxy_set_header X-Catwoman-Host $host;
+            proxy_set_header X-Catwoman-Proto $forwarded_proto;
+            proxy_read_timeout 180s;
+        }
+
         location = / {
-            return 302 /panel/;
+            proxy_pass http://catwoman_domain_discovery/entry;
+            proxy_set_header X-Catwoman-Host $host;
+            proxy_set_header X-Catwoman-Proto $forwarded_proto;
+            proxy_read_timeout 180s;
         }
 
         # Railway terminates public TLS; Nexora receives the original host/proto.
         location = /panel {
+            auth_request /__catwoman_discover;
             proxy_pass http://nexora_panel;
             include /etc/catwoman/proxy-common.conf;
             proxy_cookie_flags nexora_session secure httponly samesite=lax;
         }
 
         location ^~ /panel/ {
+            auth_request /__catwoman_discover;
             proxy_pass http://nexora_panel;
             include /etc/catwoman/proxy-common.conf;
             proxy_cookie_flags nexora_session secure httponly samesite=lax;
@@ -76,17 +96,20 @@ http {
         }
 
         location = /sub {
+            auth_request /__catwoman_discover;
             proxy_pass http://nexora_panel;
             include /etc/catwoman/proxy-common.conf;
         }
 
         location ^~ /sub/ {
+            auth_request /__catwoman_discover;
             proxy_pass http://nexora_panel;
             include /etc/catwoman/proxy-common.conf;
         }
 
         # The only default client data path: VLESS over WebSocket.
         location = /ws {
+            auth_request /__catwoman_discover;
             proxy_pass http://nexora_ws;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;

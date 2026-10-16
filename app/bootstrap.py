@@ -25,6 +25,8 @@ DOMAIN = os.getenv("CATWOMAN_DOMAIN_RESOLVED", "localhost")
 ADMIN_USER = os.getenv("CATWOMAN_ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.getenv("CATWOMAN_ADMIN_PASSWORD", "admin")
 DATA_DIR = Path(os.getenv("CATWOMAN_DATA_DIR", "/data"))
+DOMAIN_FILE = Path(os.getenv("CATWOMAN_DOMAIN_FILE", str(DATA_DIR / "bootstrap/public_domain")))
+DOMAIN_DISCOVERY_PENDING = os.getenv("CATWOMAN_DOMAIN_DISCOVERY_PENDING", "0") == "1"
 NODE_BIN = os.getenv("NODE_BIN", "/opt/nexora/nexora-node")
 PANEL_BASEPATH = "panel"
 API_ROOT = f"http://127.0.0.1:{PANEL_PORT}/{PANEL_BASEPATH}/api"
@@ -92,6 +94,24 @@ class API:
 
 def log(message: str) -> None:
     print(f"[catwoman] {message}", flush=True)
+
+
+def wait_for_discovered_domain() -> bool:
+    global DOMAIN
+    if not DOMAIN_DISCOVERY_PENDING or DOMAIN != "localhost":
+        return False
+    log("runtime sync is waiting for the first Railway domain request")
+    while True:
+        try:
+            host = DOMAIN_FILE.read_text().strip().lower().rstrip(".")
+            if host and all(ch.isalnum() or ch in ".-" for ch in host):
+                DOMAIN = host
+                # The discovery helper writes this file only after its own setup and sync succeed.
+                log(f"automatic domain setup and runtime sync completed for {host}")
+                return True
+        except OSError:
+            pass
+        time.sleep(1)
 
 
 def atomic_write(path: Path, content: str, mode: int = 0o600) -> None:
@@ -339,6 +359,8 @@ def websocket_probe(seconds: int = 60) -> None:
 
 
 def sync() -> None:
+    if wait_for_discovered_domain():
+        return
     deadline = time.monotonic() + 120
     last_error: Exception | None = None
     while time.monotonic() < deadline:

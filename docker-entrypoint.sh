@@ -22,7 +22,12 @@ if [ "$ADMIN_USER" = "admin" ] && [ "$ADMIN_PASSWORD" = "admin" ]; then
   log "WARNING: using temporary default login admin/admin; change CATWOMAN_ADMIN_PASSWORD in Railway immediately."
 fi
 
-raw_domain="${CATWOMAN_DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-localhost}}"
+DOMAIN_FILE="$DATA_DIR/bootstrap/public_domain"
+PERSISTED_DOMAIN=""
+if [ -r "$DOMAIN_FILE" ]; then
+  PERSISTED_DOMAIN="$(cat "$DOMAIN_FILE")"
+fi
+raw_domain="${CATWOMAN_DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-${PERSISTED_DOMAIN:-localhost}}}"
 DOMAIN="$(python3 - "$raw_domain" <<'PY'
 import re, sys
 from urllib.parse import urlsplit
@@ -30,12 +35,15 @@ raw = sys.argv[1].strip()
 parsed = urlsplit(raw if "://" in raw else "//" + raw)
 host = parsed.hostname or ""
 if not host or not re.fullmatch(r"[A-Za-z0-9.-]+", host):
-    raise SystemExit("invalid CATWOMAN_DOMAIN/RAILWAY_PUBLIC_DOMAIN")
+    raise SystemExit("invalid public domain")
 print(host.lower().rstrip("."))
 PY
 )"
 if [ "$DOMAIN" = "localhost" ]; then
-  log "WARNING: no Railway public domain is available yet; generate a domain and redeploy."
+  DOMAIN_DISCOVERY_PENDING=1
+  log "public domain will be detected automatically from the first Railway request"
+else
+  DOMAIN_DISCOVERY_PENDING=0
 fi
 
 export TZ PORT PANEL_BIN NODE_BIN
@@ -47,6 +55,8 @@ export CATWOMAN_WS_PATH="${CATWOMAN_WS_PATH:-/ws}"
 export CATWOMAN_ADMIN_USER="$ADMIN_USER"
 export CATWOMAN_ADMIN_PASSWORD="$ADMIN_PASSWORD"
 export CATWOMAN_DOMAIN_RESOLVED="$DOMAIN"
+export CATWOMAN_DOMAIN_FILE="$DOMAIN_FILE"
+export CATWOMAN_DOMAIN_DISCOVERY_PENDING="$DOMAIN_DISCOVERY_PENDING"
 
 PANEL_DIR="$DATA_DIR/panel"
 NODE_DIR="$DATA_DIR/node"
@@ -78,13 +88,20 @@ set_config() {
   panel_env "$PANEL_BIN" config set "$1" "$2" >/dev/null
 }
 
-log "configuring panel origin https://$DOMAIN"
-set_config public_address "https://$DOMAIN"
+if [ "$DOMAIN_DISCOVERY_PENDING" = 1 ]; then
+  log "configuring temporary domain-neutral panel mode"
+  set_config public_address ""
+  set_config web_domain ""
+  set_config sub_domain ""
+else
+  log "configuring panel origin https://$DOMAIN"
+  set_config public_address "https://$DOMAIN"
+  set_config web_domain "$DOMAIN"
+  set_config sub_domain "$DOMAIN"
+fi
 set_config web_basepath panel
-set_config web_domain "$DOMAIN"
 set_config web_tls_mode none
 set_config sub_basepath sub
-set_config sub_domain "$DOMAIN"
 set_config timezone "$TZ"
 set_config trusted_proxies "127.0.0.1/32"
 
@@ -109,6 +126,11 @@ TEMP_PANEL_PID=$!
 if ! python3 /usr/local/lib/catwoman/bootstrap.py setup; then
   cleanup_temp_panel
   exit 1
+fi
+if [ "$DOMAIN_DISCOVERY_PENDING" = 0 ]; then
+  printf '%s\n' "$DOMAIN" >"$DOMAIN_FILE.tmp"
+  chmod 0600 "$DOMAIN_FILE.tmp"
+  mv "$DOMAIN_FILE.tmp" "$DOMAIN_FILE"
 fi
 
 cleanup_temp_panel

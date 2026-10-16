@@ -51,12 +51,13 @@ RUN apt-get update \
 
 COPY --from=fetch /opt/nexora/ /opt/nexora/
 COPY app/bootstrap.py /usr/local/lib/catwoman/bootstrap.py
+COPY app/domain_discovery.py /usr/local/lib/catwoman/domain_discovery.py
 COPY docker-entrypoint.sh /usr/local/bin/catwoman-entrypoint
 COPY config/nginx.conf.template /etc/catwoman/nginx.conf.template
 COPY config/proxy-common.conf /etc/catwoman/proxy-common.conf
 COPY config/supervisord.conf /etc/catwoman/supervisord.conf
 
-RUN chmod 0755 /usr/local/bin/catwoman-entrypoint /usr/local/lib/catwoman/bootstrap.py \
+RUN chmod 0755 /usr/local/bin/catwoman-entrypoint /usr/local/lib/catwoman/bootstrap.py /usr/local/lib/catwoman/domain_discovery.py \
  && mkdir -p /data/panel /data/node/certs /data/bootstrap /run/catwoman
 
 ENV PORT=8080 \
