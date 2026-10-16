@@ -61,7 +61,7 @@ RUN chmod 0755 /usr/local/bin/catwoman-entrypoint /usr/local/lib/catwoman/bootst
 
 ENV PORT=8080 \
     TZ=Asia/Tehran \
-    CATWOMAN_ADMIN_USER=catwoman \
+    CATWOMAN_ADMIN_USER=admin \
     CATWOMAN_PANEL_PORT=12095 \
     CATWOMAN_NODE_PORT=62050 \
     CATWOMAN_INBOUND_PORT=10085 \
@@ -70,7 +70,7 @@ ENV PORT=8080 \
     PANEL_BIN=/opt/nexora/nexora-panel \
     NODE_BIN=/opt/nexora/nexora-node
 
-VOLUME ["/data"]
+# Persistence is provided by a Railway Volume mounted at /data.
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \

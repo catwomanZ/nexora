@@ -20,43 +20,42 @@
 ## استقرار با گوشی
 
 1. این مخزن را در Railway با **Deploy from GitHub Repo** باز کن.
-2. در Variables این Secret را اضافه کن:
-
-   ```text
-   CATWOMAN_ADMIN_PASSWORD=یک-رمز-قوی-حداقل-۱۲-کاراکتری
-   ```
-
-3. یک Volume بساز و دقیقاً روی این مسیر Mount کن:
+2. یک Railway Volume بساز و دقیقاً روی این مسیر Mount کن:
 
    ```text
    /data
    ```
 
-4. در Networking روی **Generate Domain** بزن.
-5. یک Redeploy انجام بده. برنامه دامنه را از `RAILWAY_PUBLIC_DOMAIN` می‌گیرد.
-6. پنل را باز کن:
+3. در Networking روی **Generate Domain** بزن.
+4. یک Redeploy انجام بده. برنامه دامنه را از `RAILWAY_PUBLIC_DOMAIN` می‌گیرد.
+5. پنل را باز کن:
 
    ```text
    https://YOUR-DOMAIN/panel/
    ```
 
-نام کاربری پیش‌فرض:
+ورود پیش‌فرض اولیه:
 
 ```text
-catwoman
+Username: admin
+Password: admin
 ```
 
-رمز همان `CATWOMAN_ADMIN_PASSWORD` است.
+این ورود ضعیف و فقط برای شروع است. بلافاصله در Railway → Variables این متغیر را اضافه کن و Redeploy بزن:
+
+```text
+CATWOMAN_ADMIN_PASSWORD=یک-رمز-قوی-جدید
+```
+
+رمز مدیر در هر شروع از Variable بالا اعمال می‌شود. برای تغییر دائمی رمز، Variable را در Railway عوض کن و Redeploy بزن؛ تغییر فقط داخل UI پنل در شروع بعدی بازنویسی می‌شود.
 
 ### متغیرهای اختیاری
 
 | متغیر | پیش‌فرض | کاربرد |
 |---|---:|---|
-| `CATWOMAN_ADMIN_USER` | `catwoman` | نام مدیر اصلی |
+| `CATWOMAN_ADMIN_PASSWORD` | `admin` | رمز مدیر؛ بعد از ورود اول فوراً تغییر بده |
 | `CATWOMAN_DOMAIN` | دامنهٔ عمومی Railway | اجبار دامنهٔ سفارشی؛ بدون `https://` هم قبول است |
 | `TZ` | `Asia/Tehran` | منطقهٔ زمانی |
-
-رمز مدیر در هر شروع از Variable بالا اعمال می‌شود. برای عوض کردن رمز، آن را در Railway تغییر بده و Redeploy کن؛ تغییر فقط داخل پنل در شروع بعدی بازنویسی می‌شود.
 
 اگر سرویس قبل از ساخت دامنه اجرا شود، موقتاً با `localhost` بالا می‌آید. بعد از Generate Domain حتماً Redeploy کن تا لینک‌های کاربر با دامنهٔ درست ساخته شوند.
 

@@ -28,7 +28,7 @@ Validation date: 2026-10-16
 
 - A stop/start with the same mounted `/data` preserved the test user's UUID, subscription ID, node certificate, and node key.
 - Changing the configured public domain reconciled the CATWOMAN resources and regenerated the user's link with the new host while preserving the UUID and node certificate.
-- Missing `CATWOMAN_ADMIN_PASSWORD` failed closed with exit code 64 and a clear error.
+- First-run initialization accepts the temporary `admin/admin` login; `CATWOMAN_ADMIN_PASSWORD` overrides it on redeploy.
 - Static checks passed for Python, POSIX shell, nginx configuration, branding, and secret scans.
 
 ## Not yet claimed

@@ -13,18 +13,13 @@ DATA_DIR="${CATWOMAN_DATA_DIR:-/data}"
 PANEL_PORT="${CATWOMAN_PANEL_PORT:-12095}"
 NODE_PORT="${CATWOMAN_NODE_PORT:-62050}"
 INBOUND_PORT="${CATWOMAN_INBOUND_PORT:-10085}"
-ADMIN_USER="${CATWOMAN_ADMIN_USER:-catwoman}"
-ADMIN_PASSWORD="${CATWOMAN_ADMIN_PASSWORD:-}"
+ADMIN_USER="${CATWOMAN_ADMIN_USER:-admin}"
+ADMIN_PASSWORD="${CATWOMAN_ADMIN_PASSWORD:-admin}"
 PORT="${PORT:-8080}"
 TZ="${TZ:-Asia/Tehran}"
 
-if [ -z "$ADMIN_PASSWORD" ]; then
-  log "ERROR: set the Railway secret CATWOMAN_ADMIN_PASSWORD (minimum 12 characters)."
-  exit 64
-fi
-if [ "${#ADMIN_PASSWORD}" -lt 12 ]; then
-  log "ERROR: CATWOMAN_ADMIN_PASSWORD must contain at least 12 characters."
-  exit 64
+if [ "$ADMIN_USER" = "admin" ] && [ "$ADMIN_PASSWORD" = "admin" ]; then
+  log "WARNING: using temporary default login admin/admin; change CATWOMAN_ADMIN_PASSWORD in Railway immediately."
 fi
 
 raw_domain="${CATWOMAN_DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-localhost}}"
